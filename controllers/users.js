@@ -11,9 +11,9 @@ async function createUser(req, res) {
         const user = new User({ email, password: hashedPassword })
         user.save()
 
-        res.status(201).send({ message: 'Utilisateur enregistré !' })
+        res.status(201).send({ message: 'Utilisateur enregistré !' }) /*201: Created code*/
     } catch (err) {
-        res.status(409).send({ message: "Utilisateur pas enregistré !" + err })
+        res.status(409).send({ message: "Utilisateur pas enregistré !" + err }) /*409: Conflict code*/
     }
 }
 
@@ -32,7 +32,7 @@ async function logUser(req, res) {
         const user = await User.findOne({ email: email })
         const isPasswordOk = await bcrypt.compare(password, user.password)
         if (!isPasswordOk) {
-            res.status(403).send({ message: "Mot de passe incorrect" })
+            res.status(403).send({ message: "Mot de passe incorrect" }) /*403: Forbidden */
         }
         const token = createToken(email)
         res.status(200).send({ userId: user?._id, token: token })
