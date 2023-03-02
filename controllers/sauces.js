@@ -18,16 +18,19 @@ const Product = mongoose.model('Product', productSchema)
 
 
 function getSauces(req, res) {
-    console.log("le token a été validé nous sommes ici");
-    // console.log("token ok: ", decoded);
     Product.find({}).then(products => res.send(products))
-    // res.send({ message: [{ sauce: "sauce1" }, { sauce: "sauce2" }] })
+        .catch(error => res.status(500).send(error))
+}
+
+function getSauceById(req, res) {
+    const { id } = req.params
+    Product.findById(id)
+        .then(product => res.send(product))
+        .catch(console.error)
 }
 
 function createSauce(req, res) {
-    console.log(__dirname);
     const { body, file } = req
-    console.log({ file });
     const { fileName } = file
     const sauce = JSON.parse(body.sauce)
 
@@ -50,7 +53,13 @@ function createSauce(req, res) {
         usersLiked: [],
         usersDisliked: []
     })
-    product.save().then((res) => console.log('produit enregistré', res)).catch(console.error)
+    product
+        .save()
+        .then((message) => {
+            res.status(201).send({ message: message })
+            return console.log('produit enregistré', message);
+        })
+        .catch(console.error)
 }
 
-module.exports = { getSauces, createSauce }
+module.exports = { getSauces, createSauce, getSauceById }
