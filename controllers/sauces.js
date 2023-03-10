@@ -25,11 +25,15 @@ function getSauces(req, res) {
 }
 
 
-function getSauceById(req, res) {
+function getSauceId(req, res) {
     const { id } = req.params
-    Product.findById(id)
-        .then(product => res.send(product))
-        .catch(console.error)
+    return Product.findById(id)
+}
+
+function getSauceById(req, res) {
+    getSauceId(req, res)
+        .then(product => sendClientResponse(product, res))
+        .catch((err) => res.status(500).send(err))
 }
 
 
@@ -38,8 +42,8 @@ function deleteSauce(req, res) {
     Product.findByIdAndDelete(id)
         .then((product) => sendClientResponse(product, res))
         .then((item) => deleteImage(item))
-        .then((res) => console.log('FILE DELETED', res))
-        .catch((err) => console.error("Y a un blem dans mon benne", err))
+        .then((res) => console.log(res))
+        .catch((err) => console.error("problem, cant modify", err))
     // .catch((err) => res.status(500).send({ message: 'Impossible de supprimer ce qui n\'existe plus...', err }))
 }
 
@@ -57,24 +61,20 @@ function modifySauce(req, res) {
     Product.findByIdAndUpdate(id, payload)
         .then((dbResponse) => sendClientResponse(dbResponse, res))
         .then((product) => deleteImage(product))
-        .then((res) => console.log('FILE DELETED', res))
-        .catch((err) => console.error("Y a un blem dans mon benne", err))
+        .then((res) => console.log(res))
+        .catch((err) => console.error("problem, cant modify", err))
 }
 
 function deleteImage(product) {
     if (product == null) return
-    console.log("DELETE IMAGE", product);
     const imageToDelete = product.imageUrl.split('/').at(-1)
     return unlink("images/" + imageToDelete)
 }
 
 function makePayload(hasNewImage, req) {
-    console.log("hasNewImage: ", hasNewImage);
     if (!hasNewImage) return req.body
     const payload = JSON.parse(req.body.sauce)
     payload.imageUrl = makeImageUrl(req, req.file.fileName)
-    console.log("NOUVELLE IMAGES A GERER");
-    console.log("voici le payload: ", payload);
     return payload
 }
 
@@ -83,8 +83,7 @@ function sendClientResponse(product, res) {
         console.log("NOTHING TO UPDATE")
         return res.status(404).send({ message: 'Objet inconnu au bataillon !' })
     }
-    console.log("NO PROBLEM !!!!!", product)
-    return Promise.resolve(res.status(200).send({ message: "SUCCESS !!!" })).then(() => product)
+    return Promise.resolve(res.status(200).send(product)).then(() => product)
 }
 
 function makeImageUrl(req, fileName) {
@@ -116,10 +115,61 @@ function createSauce(req, res) {
         .save()
         .then((message) => {
             res.status(201).send({ message: message })
-            return console.log('produit enregistré', message);
+            return console.log('produit enregistré');
         })
         .catch(console.error)
 }
 
+function likeSauce(req, res) {
+    const { like, userId } = req.body
+    if (![1, -1, 0].includes(like)) return res.status(403).send({ message: "invalid like value" })
 
-module.exports = { getSauces, createSauce, getSauceById, deleteSauce, modifySauce }
+    getSauceId(req, res)
+        .then((product) => updateVote(product, like, userId, res))
+        .then((pr) => pr.save())
+        .then((prod) => sendClientResponse(prod, res))
+        .catch((err) => res.status(500).send(err))
+}
+
+
+function updateVote(product, like, userId, res) {
+    if (like === 1 || like === -1) return incrementVote(product, userId, like)
+    return resetVote(product, userId, res)
+
+}
+
+
+function resetVote(product, userId, res) {
+    const { usersLiked, usersDisliked } = product
+    if ([usersLiked, usersDisliked].every(arr => arr.includes(userId))) return Promise.reject("Problem, users like & dislike in same time...")
+
+    if (![usersLiked, usersDisliked].some(arr => arr.includes(userId))) return Promise.reject("problem, we have no vote yet...")
+
+
+    if (usersLiked.includes(userId)) {
+        --product.likes
+        product.usersLiked = product.usersLiked.filter(id => id != userId)
+    } else {
+        --product.dislikes
+        product.usersDisliked = product.usersDisliked.filter(id => id != userId)
+    }
+    return product
+}
+
+
+function incrementVote(product, userId, like) {
+    const { usersLiked, usersDisliked } = product
+
+    const votersArray = like === 1 ? usersLiked : usersDisliked
+
+    if (votersArray.includes(userId)) return product
+    votersArray.push(userId)
+
+    like === 1 ? ++product.likes : ++product.dislikes
+    return product
+
+}
+
+
+
+module.exports = { getSauces, createSauce, getSauceById, deleteSauce, modifySauce, likeSauce }
