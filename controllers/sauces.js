@@ -2,6 +2,7 @@ const { response } = require('express')
 const mongoose = require('mongoose')
 const { unlink } = require('fs/promises')
 
+
 const productSchema = new mongoose.Schema({
     userId: String,
     name: String,
@@ -44,7 +45,6 @@ function deleteSauce(req, res) {
         .then((item) => deleteImage(item))
         .then((res) => console.log(res))
         .catch((err) => console.error("problem, cant modify", err))
-    // .catch((err) => res.status(500).send({ message: 'Impossible de supprimer ce qui n\'existe plus...', err }))
 }
 
 
@@ -52,8 +52,6 @@ function modifySauce(req, res) {
     const {
         params: { id }
     } = req
-
-    console.log("req.file", req.file);
 
     const hasNewImage = req.file != null
     const payload = makePayload(hasNewImage, req)
@@ -80,8 +78,8 @@ function makePayload(hasNewImage, req) {
 
 function sendClientResponse(product, res) {
     if (product == null) {
-        console.log("NOTHING TO UPDATE")
-        return res.status(404).send({ message: 'Objet inconnu au bataillon !' })
+        console.log("Nothing to update")
+        return res.status(404).send({ message: 'Unknow object !' })
     }
     return Promise.resolve(res.status(200).send(product)).then(() => product)
 }
@@ -119,6 +117,7 @@ function createSauce(req, res) {
         })
         .catch(console.error)
 }
+
 
 function likeSauce(req, res) {
     const { like, userId } = req.body
@@ -172,4 +171,5 @@ function incrementVote(product, userId, like) {
 
 
 
-module.exports = { getSauces, createSauce, getSauceById, deleteSauce, modifySauce, likeSauce }
+
+module.exports = { sendClientResponse, getSauceId, getSauces, createSauce, getSauceById, deleteSauce, modifySauce, likeSauce }
